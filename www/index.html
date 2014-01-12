@@ -1,0 +1,334 @@
+
+<html lang="en">
+<head>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta charset="UTF-8">
+	<title>Digit</title>
+	<link rel="stylesheet" href="css/idangerous.swiper.css">
+	<link rel="stylesheet" href="css/normalize.css">
+	<link rel="stylesheet" href="css/style.css">
+	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+	<script src="js/highcharts.js"></script>
+	<script src="js/highcharts-more.js"></script>
+	<script src="js/modules/exporting.js"></script>
+	<script src="js/idangerous.swiper-2.1.min.js"></script>
+	<script type="text/javascript">
+
+	// on temp_up/down go to url api/set/test1/18 and refresh page with given data.
+
+	function highCharts(GraphContainer,graphName){
+		windowWidth = $(window).width();
+		if (windowWidth < 480){
+			days = 1;
+		}
+		else if (windowWidth >= 480 && windowWidth < 1600 ){
+			days = 3;
+		}else{
+			days = 7;
+		}
+		
+	
+	
+		$.getJSON('/api/graph/'+graphName+'/'+days+'/3600/endNow', function(data){
+		$.getJSON('/api/graph/'+graphName+'/options', function(data_options){
+			$.extend(true, data,data_options);
+			
+			// sort data for last value
+			
+			// Create the chart
+			$(GraphContainer).highcharts({
+				chart: {
+					backgroundColor: '',
+					spacing: [120,20,25,10],
+					borderRadius: 0,
+					type:'spline',
+					
+				},
+				exporting: {
+					enabled: false,
+				},
+
+				title: {
+					text: null
+				},
+				plotOptions: {
+					line: {
+						dataLabels: {
+							enabled: true
+						}
+					},
+
+					series: {
+						connectNulls: true,
+						marker: {
+							enabled: false,
+						},
+						states: {
+							hover: {
+								enabled: true,
+								lineWidth: 2
+							}
+						},
+						point: {
+							events: {
+								mouseOver: function() {
+									
+									if (!this.series.options.linkedTo){
+										var temp = this.y.toFixed(1).split('.');
+										if (temp[1] == undefined) {
+											temp[1] = '0';
+										}
+										$('.'+graphName+ ' .room_temp span').text(temp[0]+'°');
+										$('.'+graphName+ ' .room_temp_dec').text('.'+temp[1]);
+									} else {
+										$('.'+graphName+ ' .room_temp_set').text(this.y.toFixed(1)+'°');
+									}
+									$('.'+graphName+ ' .room_date').text(Highcharts.dateFormat('%d.%m.%Y - %H:%M', this.x));
+								}
+							}
+						},
+						events: {
+							mouseOut: function() {
+								if (!this.options.linkedTo){
+									var temp = this.data[this.data.length-1].y.toFixed(1).split('.');
+									if (temp[1] == undefined) {
+										temp[1] = '0';
+									}
+									$('.'+graphName+ ' .room_temp span').text(temp[0]+'°');
+									$('.'+graphName+ ' .room_temp_dec').text('.'+temp[1]);
+								} else {
+									$('.'+graphName+ ' .room_temp_set').text(this.data[this.data.length-1].y.toFixed(1)+'°');
+								}
+								$('.'+graphName+ ' .room_date').text('');
+							}
+						}
+					}
+
+				},
+
+				xAxis: {
+					type: 'datetime',
+					lineColor: '#FFF',
+					tickColor: '#FFF',
+					labels: {
+						style: {
+							color: '#FFF',
+						}
+					},
+					maxZoom: 1 * 2 * 3600 * 1000,
+					title: {
+						text: null
+					},
+				},
+				yAxis: {
+					gridLineColor: '#FFF',
+					gridLineWidth: 0,
+					//tickInterval: 0.5,
+					lineColor: '#FFF',
+					labels: {
+						style: {
+							color: '#FFF',
+						}
+					},
+					title: {
+						text: null
+					}
+
+				},
+				legend: {
+					enabled: false,
+				},
+				tooltip: {
+					animation: false,
+					enabled: false,
+					crosshairs: false,
+					shared: true,
+					valueSuffix: '°C'
+				},
+				series:data
+			});
+		});
+		});
+	}
+
+	function shadeColor(color, shade) {
+		var colorInt = parseInt(color.substring(1),16);
+		var R = (colorInt & 0xFF0000) >> 16;
+		var G = (colorInt & 0x00FF00) >> 8;
+		var B = (colorInt & 0x0000FF) >> 0;
+		R = R + Math.floor((shade/255)*R);
+		G = G + Math.floor((shade/255)*G);
+		B = B + Math.floor((shade/255)*B);
+		var newColorInt = (R<<16) + (G<<8) + (B);
+		var newColorStr = "#"+newColorInt.toString(16);
+		return newColorStr;
+	}
+
+	function drawGraph(){
+		$('.room_graph').html('');
+		var graphName = $('.swiper-nested .swiper-slide-active .room_name').text();
+		highCharts('.swiper-nested .swiper-slide-active .room_graph',graphName);
+	}
+
+	function fillData(data_options){
+		$.each(data_options, function(index, object) {
+			if (object.linkedTo != ':previous'){
+				var temp = object.lastValue.toFixed(1).split('.');
+				if (temp[1] == undefined) {
+					temp[1] = '0';
+				}
+				$('.'+ object.name + ' .room_temp span').text(temp[0]+'°');
+				$('.'+ object.name + ' .room_temp_dec').text('.'+temp[1]);
+				$('.'+ object.name + ' .room_temp_set').text(object.lastSetPointValue.toFixed(1)+'°');
+				
+				$('.'+ object.name + ' .room_name').text(object.name);
+			}
+		});
+	}
+	
+	function setNewTemp(delta,sensorName){
+		oldSetTemp = $('.swiper-nested .swiper-slide-active .room_temp_set').text().slice(0, - 1);
+		newSetTemp = parseFloat(oldSetTemp) + parseFloat(delta);
+		$.getJSON('/api/set/'+ sensorName +'/'+ newSetTemp, function(data_options){
+			fillData(data_options);
+			return true;
+		});
+	}
+	
+	
+	function retrieveNewData(){
+		$.getJSON('/api/graph/all/options', function(data_options){
+			fillData(data_options);
+			drawGraph();
+			return true;
+		});
+	}
+	
+	$(document).ready(function () {
+		$.getJSON('/api/graph/all/options', function(data_options){
+			$.each(data_options, function(index, object) {
+	 			if (object.linkedTo != ':previous'){
+	 				var newColor = shadeColor(object.color, -50);
+	 				
+	 				$(".swiper-nested .swiper-wrapper").append(' \
+							<div class="swiper-slide '+object.name+'"> \
+							<div class="room_data"> \
+								<div class="room_temp"><span></span><div class="room_temp_dec"></div></div> \
+								<div class="room_name" ></div> \
+								<div class="room_control"> \
+									<a class="arrow-up" href="#"></a> \
+									<div class=room_temp_set>°</div> \
+									<a class="arrow-down" href="#"></a> \
+								</div> \
+								<div class="room_date" ></div> \
+							</div> \
+							<div id="room_graph" class="room_graph noSwipingClass"></div> \
+						</div>');
+					$("style").append('.'+object.name+' {background:'+newColor +';}\n');
+				};
+			});
+			
+			$(function(){
+				var pullSwiper = $('.swiper-parent').swiper({
+					mode:'vertical',
+	
+					onTouchStart: function() {
+						holdPosition = 0;
+					},
+					onResistanceBefore: function(s, pos){
+						holdPosition = pos;
+					},
+					onTouchEnd: function(){
+						if (holdPosition>100) {
+							pullSwiper.setWrapperTranslate(0,100,0)
+							pullSwiper.params.onlyExternal=true
+							$('.preloader').addClass('visible');
+	
+							//reLoad data
+							setTimeout(function(){
+								
+								retrieveNewData();
+								//Release interactions and set wrapper
+								console.log('start timeout');
+								pullSwiper.setWrapperTranslate(0,0,0);
+								pullSwiper.params.onlyExternal=false;
+								pullSwiper.updateActiveSlide(0);
+	
+								//Hide loader
+								$('.preloader').removeClass('visible')
+							},800)
+						}
+						
+					}
+				});
+			})
+			$(function(){
+				var mySwiper = $('.swiper-nested').swiper({
+					loop:true,
+					grabCursor: true,
+
+					onSlideChangeEnd : function() {
+						drawGraph();
+					}
+				});
+			
+
+			$('.arrow-left').on('click', function(e){
+			e.preventDefault();
+			mySwiper.swipePrev();
+			});
+
+			$('.arrow-right').on('click', function(e){
+			e.preventDefault();
+			mySwiper.swipeNext();
+			});
+
+			$('.arrow-up').on('click', function(e){
+			e.preventDefault();
+			var sensorName = $('.swiper-nested .swiper-slide-active .room_name').text();
+			setNewTemp(0.5,sensorName);
+			});
+			
+			$('.arrow-down').on('click', function(e){
+			e.preventDefault();
+			var sensorName = $('.swiper-nested .swiper-slide-active .room_name').text();
+			setNewTemp(-0.5,sensorName);
+			});
+
+			fillData(data_options);
+			drawGraph();
+			
+})
+
+ 		});
+ 		
+ 		$(window).resize(function() {
+			clearTimeout(this.id);
+			this.id = setTimeout(retrieveNewData, 600);
+		});
+	});
+
+	</script>
+	<style type="text/css"></style>
+</head>
+
+<body>
+	<div class="preloader">
+		Loading...
+	</div>
+	<div id="reporting"></div>
+	<a class="arrow-left" href="#"></a>
+	<a class="arrow-right" href="#"></a>
+	<div class="swiper-container swiper-parent">
+		<div class="swiper-wrapper">
+			<div class="swiper-slide parent-slide">
+				<div class="swiper-container swiper-nested">
+					<div class="swiper-wrapper"></div>
+				</div>
+			</div>
+		</div>
+	<div/>
+	<div class="pagination"></div>
+</body>
+</html>
