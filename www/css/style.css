@@ -89,26 +89,27 @@ body {
 .room_name{
 	position: absolute;
 	top:95px;
-	left:105px;
+	left:0px;
+	width: 145px;
 	font-size: 14px;
 	text-align: right;
 }
 .room_date{
 	position: absolute;
 	top:95px;
-	right:60px;
+	right: 55px;
 	font-size: 14px;
 	text-align: right;
 }
 .room_control{
 	position: absolute;
 	top: -10px;
-	right: 60px;
+	right: 55px;
 }
 .room_temp_set{
 	position: absolute;
 	top: 58px;
-	right: -6px;
+	right: -9px;
 	font-size: 18px;
 	
 }

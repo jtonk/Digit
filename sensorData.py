@@ -7,7 +7,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 class sensorData:
-	def __init__(self,name,sensorID,sensorType,dist,valves,temp_set,hum_set,delta,color): 
+	def __init__(self,sensor,name,sensorID,sensorType,dist,valves,temp_set,hum_set,delta,color): 
+		self.sensor = sensor
 		self.name = name
 		self.sensorID = sensorID
 		self.sensorType = sensorType
@@ -17,7 +18,7 @@ class sensorData:
 		self.hum_set = hum_set
 		self.temperature = "NaN"
 		self.humidity = "NaN"
-		self.db = config.dataPrefix + "/RRD/" + self.name + ".rrd"
+		self.db = config.dataPrefix + "/RRD/" + self.sensor + ".rrd"
 		self.color = color
 		self.createRRD()
 
@@ -38,7 +39,7 @@ class sensorData:
 				try:
 					t, h = dhtreader.read(int(sType), int(self.sensorID))
 				except TypeError:
-					logging.info("Failed to read from sensor '"+ self.name +"' on attempt "+ str(count+1))
+					logging.info("Failed to read from sensor '"+ self.sensor +"' on attempt "+ str(count+1))
 					count = count + 1
 					time.sleep(2)
 				else:
@@ -60,7 +61,7 @@ class sensorData:
 						if equals_pos != -1:
 							temp_string = lines[1][equals_pos+2:]
 				except:
-					logging.warning("Failed to read from sensor '"+ self.name +"' on attempt "+ str(count+1))
+					logging.warning("Failed to read from sensor '"+ self.sensor +"' on attempt "+ str(count+1))
 					count = count + 1
 					time.sleep(0.2)
 				else:

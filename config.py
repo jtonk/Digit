@@ -38,7 +38,8 @@ def readConfig(configFile):
 	
 	for section in sorted(config.sections()):
 		if section.find('sensor') != -1:
-			sensors[section] = sensorData(config.get(section,"name"),
+			sensors[section] = sensorData(section,
+				config.get(section,"name"),
 				config.get(section,"sensorID"), 
 				config.get(section,"sensorType"), 
 				config.get(section,"dist"), 

@@ -2,3 +2,5 @@
 *.so
 *.rrd
 *.log
+.AppleDouble
+.DS_Store

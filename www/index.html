@@ -17,7 +17,7 @@
 
 	// on temp_up/down go to url api/set/test1/18 and refresh page with given data.
 
-	function highCharts(GraphContainer,graphName){
+	function highCharts(GraphContainer,sensor){
 		windowWidth = $(window).width();
 		if (windowWidth < 480){
 			days = 1;
@@ -30,8 +30,8 @@
 		
 	
 	
-		$.getJSON('/api/graph/'+graphName+'/'+days+'/3600/endNow', function(data){
-		$.getJSON('/api/graph/'+graphName+'/options', function(data_options){
+		$.getJSON('/api/graph/'+sensor+'/'+days+'/3600/endNow', function(data){
+		$.getJSON('/api/graph/'+sensor+'/options', function(data_options){
 			$.extend(true, data,data_options);
 			
 			// sort data for last value
@@ -79,12 +79,12 @@
 										if (temp[1] == undefined) {
 											temp[1] = '0';
 										}
-										$('.'+graphName+ ' .room_temp span').text(temp[0]+'°');
-										$('.'+graphName+ ' .room_temp_dec').text('.'+temp[1]);
+										$('.'+sensor+ ' .room_temp span').text(temp[0]+'°');
+										$('.'+sensor+ ' .room_temp_dec').text('.'+temp[1]);
 									} else {
-										$('.'+graphName+ ' .room_temp_set').text(this.y.toFixed(1)+'°');
+										$('.'+sensor+ ' .room_temp_set').text(this.y.toFixed(1)+'°');
 									}
-									$('.'+graphName+ ' .room_date').text(Highcharts.dateFormat('%d.%m.%Y - %H:%M', this.x));
+									$('.'+sensor+ ' .room_date').text(Highcharts.dateFormat('%d.%m.%Y - %H:%M', this.x));
 								}
 							}
 						},
@@ -95,12 +95,12 @@
 									if (temp[1] == undefined) {
 										temp[1] = '0';
 									}
-									$('.'+graphName+ ' .room_temp span').text(temp[0]+'°');
-									$('.'+graphName+ ' .room_temp_dec').text('.'+temp[1]);
+									$('.'+sensor+ ' .room_temp span').text(temp[0]+'°');
+									$('.'+sensor+ ' .room_temp_dec').text('.'+temp[1]);
 								} else {
-									$('.'+graphName+ ' .room_temp_set').text(this.data[this.data.length-1].y.toFixed(1)+'°');
+									$('.'+sensor+ ' .room_temp_set').text(this.data[this.data.length-1].y.toFixed(1)+'°');
 								}
-								$('.'+graphName+ ' .room_date').text('');
+								$('.'+sensor+ ' .room_date').text('');
 							}
 						}
 					}
@@ -167,8 +167,8 @@
 
 	function drawGraph(){
 		$('.room_graph').html('');
-		var graphName = $('.swiper-nested .swiper-slide-active .room_name').text();
-		highCharts('.swiper-nested .swiper-slide-active .room_graph',graphName);
+		var sensor = $('.swiper-nested .swiper-slide-active .sensor').text();
+		highCharts('.swiper-nested .swiper-slide-active .room_graph',sensor);
 	}
 
 	function fillData(data_options){
@@ -178,11 +178,9 @@
 				if (temp[1] == undefined) {
 					temp[1] = '0';
 				}
-				$('.'+ object.name + ' .room_temp span').text(temp[0]+'°');
-				$('.'+ object.name + ' .room_temp_dec').text('.'+temp[1]);
-				$('.'+ object.name + ' .room_temp_set').text(object.lastSetPointValue.toFixed(1)+'°');
-				
-				$('.'+ object.name + ' .room_name').text(object.name);
+				$('.'+ object.sensor + ' .room_temp span').text(temp[0]+'°');
+				$('.'+ object.sensor + ' .room_temp_dec').text('.'+temp[1]);
+				$('.'+ object.sensor + ' .room_temp_set').text(object.lastSetPointValue.toFixed(1)+'°');
 			}
 		});
 	}
@@ -212,10 +210,10 @@
 	 				var newColor = shadeColor(object.color, -50);
 	 				
 	 				$(".swiper-nested .swiper-wrapper").append(' \
-							<div class="swiper-slide '+object.name+'"> \
+							<div class="swiper-slide '+object.sensor+'"><div class="sensor" style="display: none;">'+object.sensor+'</div> \
 							<div class="room_data"> \
 								<div class="room_temp"><span></span><div class="room_temp_dec"></div></div> \
-								<div class="room_name" ></div> \
+								<div class="room_name" >'+object.name+'</div> \
 								<div class="room_control"> \
 									<a class="arrow-up" href="#"></a> \
 									<div class=room_temp_set>°</div> \
@@ -225,7 +223,7 @@
 							</div> \
 							<div id="room_graph" class="room_graph noSwipingClass"></div> \
 						</div>');
-					$("style").append('.'+object.name+' {background:'+newColor +';}\n');
+					$("style").append('.'+object.sensor+' {background:'+newColor +';}\n');
 				};
 			});
 			
@@ -286,13 +284,13 @@
 
 			$('.arrow-up').on('click', function(e){
 			e.preventDefault();
-			var sensorName = $('.swiper-nested .swiper-slide-active .room_name').text();
+			var sensorName = $('.swiper-nested .swiper-slide-active .sensor').text();
 			setNewTemp(0.5,sensorName);
 			});
 			
 			$('.arrow-down').on('click', function(e){
 			e.preventDefault();
-			var sensorName = $('.swiper-nested .swiper-slide-active .room_name').text();
+			var sensorName = $('.swiper-nested .swiper-slide-active .sensor').text();
 			setNewTemp(-0.5,sensorName);
 			});
 

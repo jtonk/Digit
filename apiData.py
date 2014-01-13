@@ -19,7 +19,7 @@ def apiData(dataRequest):
 		for keys,value in sorted(config.sensors.items()):
 			if dataRequest[2] == 'all':
 				value.setTemp(newTemp)
-			elif dataRequest[2] == value.name:
+			elif dataRequest[2] == value.sensor:
 				value.setTemp(newTemp)
 		f = jsonGraphOptions(dataRequest)
 	return f
@@ -36,9 +36,7 @@ def jsonGraphData(dataRequest):
 	end = now
 	for keys,value in sorted(config.sensors.items()):
 		def getRRDData(dataRequest,keys,value):
-			
-		
-			period, metric, rrdData = rrdtool.fetch( config.dataPrefix + '/RRD/' + value.name + '.rrd', 'AVERAGE','-r',str(dataRequest[4]), '-s', str(start), '-e', str(end) )
+			period, metric, rrdData = rrdtool.fetch(config.dataPrefix + '/RRD/' + value.sensor + '.rrd', 'AVERAGE','-r',str(dataRequest[4]), '-s', str(start), '-e', str(end) )
 			i=0
 			del myList[:]
 			del myList_setpoint[:]
@@ -60,14 +58,18 @@ def jsonGraphData(dataRequest):
 				myList.append(dataList)
 				myList_setpoint.append(dataList_setpoint)
 				i = i+1
-			series = {'name':value.name,'data':tuple(myList)}
-			series_setpoint = {'name':value.name + '_setpoint','data':tuple(myList_setpoint)}
+			series = {'sensor':value.sensor,
+				'name':value.name,
+				'data':tuple(myList)}
+			series_setpoint = {'sensor':value.sensor,
+				'name':value.name + '_setpoint',
+				'data':tuple(myList_setpoint)}
 			return series, series_setpoint
 		if dataRequest[2] == 'all':
 			series, series_setpoint = getRRDData(dataRequest,keys,value)
 			content.append(series)
 			content.append(series_setpoint)
-		if dataRequest[2] == value.name:
+		if dataRequest[2] == value.sensor:
 			series, series_setpoint = getRRDData(dataRequest,keys,value)
 			content.append(series)
 			content.append(series_setpoint)
@@ -82,11 +84,13 @@ def jsonGraphOptions(dataRequest):
 	
 	for keys,value in sorted(config.sensors.items()):
 		def getOptionsData(dataRequest,keys,value):
-			series = {'name':value.name,
+			series = {'sensor':value.sensor,
+				'name':value.name,
 				'color':value.color,
 				'lastValue':round(float(value.temperature),2),
 				'lastSetPointValue':round(float(value.temp_set),2)}
-			series_setpoint = {'name':value.name + '_setpoint',
+			series_setpoint = {'sensor':value.sensor,
+				'name':value.name + '_setpoint',
 				'dashStyle':'Dash',
 				'color':value.color,
 				'linkedTo':':previous',
@@ -97,7 +101,7 @@ def jsonGraphOptions(dataRequest):
 			series, series_setpoint = getOptionsData(dataRequest,keys,value)
 			content.append(series.copy())
 			content.append(series_setpoint.copy())
-		if dataRequest[2] == value.name:
+		if dataRequest[2] == value.sensor:
 			series, series_setpoint = getOptionsData(dataRequest,keys,value)
 			content.append(series.copy())
 			content.append(series_setpoint.copy())

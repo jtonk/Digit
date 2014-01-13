@@ -43,7 +43,7 @@ def do_scheduler():
 	atexit.register(lambda: sched.shutdown(wait=False))
 	sched.start()
 	
-	#start measuring schedule uncomment to start first measurement immediately
+	#start measuring schedule uncomment next line to start first measurement immediately
 	scheduleData.sched_measure()
 	sched.add_cron_job(scheduleData.sched_measure, minute="*/10")
 
