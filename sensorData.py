@@ -7,7 +7,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 class sensorData:
-	def __init__(self,sensor,name,sensorID,sensorType,dist,valves,temp_set,hum_set,delta,color): 
+	def __init__(self,sensor,name,sensorID,sensorType,dist,valves,temp_set,hum_set,color): 
 		self.sensor = sensor
 		self.name = name
 		self.sensorID = sensorID
@@ -74,24 +74,24 @@ class sensorData:
 	def updateRRD(self):
 		rrdtool.update(self.db, '{0}:{1}:{2}:{3}:{4}'.format(int(time.time()), self.temperature, self.temp_set, self.humidity, self.hum_set))
 		logging.info("writing log for '{0}'".format(self.name))
-
+		
 	def setTemp(self, value):
 		self.temp_set = round(value,1)
 		logging.info("new min temp. '{0}' to {1}'C".format(self.name,self.temp_set))
+		config.writeConfig(self.sensor, 'temp_set', str(self.temp_set))
 		self.tempCheck()
 
 	def setHum(self, value):
 		self.hum_set = value
 		logging.info("new min hum. '{0}' to {1}%".format(self.name,self.hum_set))
+		config.writeConfig(self.sensor, 'hum_set', str(self.temp_set))
 
 	def tempCheck(self):
 		logging.info("check temp. '{0}' current/min: {2}/{1}'C".format(self.name, self.temp_set, self.temperature))
-		if float(self.temp_set) > float(self.temperature):
+		if float(self.temp_set) >= float(self.temperature):
 			self.dist.changeValve(self.valves,True)
-			return False;
 		else:
 			self.dist.changeValve(self.valves,False)
-			return True;
 
 	def createRRD(self):
 		if os.path.isfile(self.db) == False:

@@ -3,6 +3,7 @@ import os, time
 import ConfigParser
 import logging
 logger = logging.getLogger(__name__)
+import shiftpi
 
 #local libs
 from sensorData import sensorData
@@ -14,8 +15,9 @@ dataPrefix = ""
 sensors = {}
 online = {}
 distrib = {}
+configFile = '/home/jasper/Digit/settings.cfg'
 
-def readConfig(configFile):
+def readConfig():
 	now = time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.localtime())
 	logger.info('reading configuration from {0}'.format(configFile, now))
 	config = ConfigParser.RawConfigParser()
@@ -27,10 +29,10 @@ def readConfig(configFile):
 	dataPrefix = config.get('setup',"dataPrefix")
 	
 	#read shift pins
-	ssSER_PIN = config.getint('setup',"SER_PIN")
+	SER_PIN = config.getint('setup',"SER_PIN")
 	RCLK_PIN = config.getint('setup',"RCLK_PIN")
 	SRCLK_PIN = config.getint('setup',"SRCLK_PIN")
-	#shiftpi.pinsSetup(ser = SER_PIN, rclk = RCLK_PIN, srclk = SRCLK_PIN)
+	shiftpi.pinsSetup(ser = SER_PIN, rclk = RCLK_PIN, srclk = SRCLK_PIN)
 
 	global sensors
 	global online
@@ -46,7 +48,6 @@ def readConfig(configFile):
 				config.get(section,"valves").split(','), 
 				config.get(section,"temp_set"), 
 				config.get(section,"hum_set"),
-				config.get(section,"delta"),
 				config.get(section,"color"))
 		if section.find('online') != -1:
 			online[section] = onlineData(config.get(section,"service"), 
@@ -54,3 +55,10 @@ def readConfig(configFile):
 		if section.find('dist') != -1:
 			distrib[section] = distributorData(config.get(section,"name"), config.get(section,"nr"))
 	return distrib,sensors,online
+	
+def writeConfig(section, key, value):
+	config = ConfigParser.RawConfigParser()
+	config.read(configFile)
+	config.set(section, key, value)
+	with open(configFile, 'wb') as configfile:
+		config.write(configfile)

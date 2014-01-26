@@ -17,7 +17,7 @@ def do_main_program():
 	
 	global distrib,sensors,online
 	
-	distrib,sensors,online = config.readConfig('/home/jasper/Digit/settings.cfg')
+	distrib,sensors,online = config.readConfig()
 	
 	logger.debug(distrib.keys())
 	logger.debug(sensors.keys())
