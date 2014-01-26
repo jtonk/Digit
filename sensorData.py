@@ -12,7 +12,7 @@ class sensorData:
 		self.name = name
 		self.sensorID = sensorID
 		self.sensorType = sensorType
-		self.dist = dist
+		self.dist = config.distrib[dist]
 		self.valves = valves
 		self.temp_set = round(float(temp_set),1)
 		self.hum_set = hum_set
@@ -21,7 +21,7 @@ class sensorData:
 		self.db = config.dataPrefix + "/RRD/" + self.sensor + ".rrd"
 		self.color = color
 		self.createRRD()
-
+		logging.info("initialized sensor '"+ self.sensor +"'")
 	def measure(self):
 	#read data for DHT compatible
 		if self.sensorType in ("DHT11","DHT23","AM2302"):
@@ -69,8 +69,7 @@ class sensorData:
 					self.humidity = "NaN"
 					break
 
-		logging.info("{0}: {1}'C / {2}%".format(self.name, self.temperature, self.humidity))
-		
+		logging.debug("{0}: {1}'C / {2}%".format(self.name, self.temperature, self.humidity))
 
 	def updateRRD(self):
 		rrdtool.update(self.db, '{0}:{1}:{2}:{3}:{4}'.format(int(time.time()), self.temperature, self.temp_set, self.humidity, self.hum_set))
@@ -79,6 +78,7 @@ class sensorData:
 	def setTemp(self, value):
 		self.temp_set = round(value,1)
 		logging.info("new min temp. '{0}' to {1}'C".format(self.name,self.temp_set))
+		self.tempCheck()
 
 	def setHum(self, value):
 		self.hum_set = value
@@ -90,6 +90,7 @@ class sensorData:
 			self.dist.changeValve(self.valves,True)
 			return False;
 		else:
+			self.dist.changeValve(self.valves,False)
 			return True;
 
 	def createRRD(self):
