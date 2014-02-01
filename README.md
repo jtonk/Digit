@@ -21,9 +21,11 @@ https://www.dropbox.com/s/bmcsear1y5gtxcy/Digit_raspberry_wires.jpg
     --will update on request--
     
     sudo apt-get install python-daemon python-bs4 python-GPIO python-rpi.gpio
-    maybe more modules needed
 
-    setup the settings.cfg file 
+maybe more modules needed
+
+setup the settings.cfg file 
+
     [sensor1]
     name = 'kitchen'
     sensorid = 28-0000058877bc
@@ -41,16 +43,19 @@ https://www.dropbox.com/s/bmcsear1y5gtxcy/Digit_raspberry_wires.jpg
 ## How to use
 
 Since we have to use the GPIO pins we have to run as root.
-Launch with 
+Launch with
+
     sudo ./run-daemon.py start
 
 Stop with 
+
     sudo ./run-daemon.py stop
 
 ## Debugging and logging
 
 In the root folder of Digit do
-	tail -f digit.log
+
+    tail -f digit.log
 
 to see all logging information.
 

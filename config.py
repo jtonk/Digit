@@ -15,7 +15,7 @@ dataPrefix = ""
 sensors = {}
 online = {}
 distrib = {}
-configFile = '/home/jasper/Digit/settings.cfg'
+configFile = '/home/jasper/Digit/settings.ini'
 
 def readConfig():
 	now = time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.localtime())

@@ -181,6 +181,13 @@
 				$('.'+ object.sensor + ' .room_temp span').text(temp[0]+'°');
 				$('.'+ object.sensor + ' .room_temp_dec').text('.'+temp[1]);
 				$('.'+ object.sensor + ' .room_temp_set').text(object.lastSetPointValue.toFixed(1)+'°');
+				$('.'+ object.sensor + ' .room_temp_icon_fire').text('');
+				
+				if (object.lastValue <= object.lastSetPointValue){
+					$('.'+ object.sensor + ' .room_temp_icon_fire').append('<img src="img/icon-fire.png"/>');
+				} else {
+					$('.'+ object.sensor + ' .room_temp_icon_fire').text('');
+				}
 			}
 		});
 	}
@@ -218,6 +225,7 @@
 									<a class="arrow-up" href="#"></a> \
 									<div class=room_temp_set>°</div> \
 									<a class="arrow-down" href="#"></a> \
+									<div class="room_temp_icon_fire"></div> \
 								</div> \
 								<div class="room_date" ></div> \
 							</div> \

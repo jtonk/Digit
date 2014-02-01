@@ -28,4 +28,4 @@ class distributorData:
 			if state == False:
 				shiftpi.digitalWrite(valve, shiftpi.LOW)
 				logger.info("setting distributor valve {0}-{1} to CLOSE".format(self.name, valve))
-			time.sleep(0.1)
+			#time.sleep(0.1)
