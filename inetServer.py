@@ -6,12 +6,10 @@ import config
 import apiData
 import logging
 logger = logging.getLogger(__name__)
-import urlparse
-from os import curdir, sep
 import shutil
-import contextlib
-import daemon
-
+#import contextlib
+from SocketServer import ThreadingMixIn
+import threading
 
 #Create custom HTTPRequestHandler class
 class customHTTPRequestHandler(BaseHTTPRequestHandler):
@@ -37,22 +35,25 @@ class customHTTPRequestHandler(BaseHTTPRequestHandler):
 				self.end_headers()
 				with open(rootdir + self.path, 'rb') as content:
 					shutil.copyfileobj(content, self.wfile)
+			thread =  threading.currentThread().getName()
+			logger.debug('do_GET respons in thread: ' + thread)
 			return
 				
 		except IOError:
 			self.send_error(404, 'file not found')
-		except:
-			self.send_error(500, 'Internal Server Error')
+#		except:
+#			self.send_error(500, 'Internal Server Error')
 	def log_message(self, format, *args):
 		pass
 
-
+class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
+	"""Handle requests in a separate thread."""
 
 
 def threadHTTP():
 	logger.info('http server is starting...')
 	server_address = ("", 80)
-	server = HTTPServer(server_address, customHTTPRequestHandler)
+	server = ThreadedHTTPServer(server_address, customHTTPRequestHandler)
 	logger.info('http server is running...')
 	server.serve_forever()
 

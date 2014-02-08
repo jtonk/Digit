@@ -16,15 +16,31 @@ At this moment the logging and measuring runs quite stable, there are some issue
 picture of the breadboard:
 https://www.dropbox.com/s/bmcsear1y5gtxcy/Digit_raspberry_wires.jpg
 
-## install requirements
 
-    --will update on request--
+
+## installation
+
+    git clone https://github.com/jtonk/Digit
     
-    sudo apt-get install python-daemon python-bs4 python-GPIO python-rpi.gpio
+    sudo apt-get install python-daemon python-pip python-rpi.gpio python-requests python-bs4 python-rrdtool
 
-maybe more modules needed
+    sudo pip install apscheduler
 
-setup the settings.cfg file 
+if you use one-wire sensors also load the kernel modules
+
+    sudo modprobe w1-gpio
+    sudo modprobe w1-therm
+
+    sudo echo "w1-gpio" >> /etc/modules
+    sudo echo "w1-therm" >> /etc/modules
+    
+    ls /sys/bus/w1/devices/
+
+check if this list has some devices. copy these ID to your settings.ini
+
+## config
+
+setup the settings.ini file 
 
     [sensor1]
     name = 'kitchen'
@@ -36,10 +52,6 @@ setup the settings.cfg file
     hum_set = NaN
     color = #67E8CE
 
-## installation
-
-    git clone https://github.com/jtonk/Digit
-    
 ## How to use
 
 Since we have to use the GPIO pins we have to run as root.

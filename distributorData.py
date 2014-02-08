@@ -13,9 +13,9 @@ class distributorData:
 		i=0
 		while i<=7:
 			self.changeValve([i], False)
-			time.sleep(0.1)
+			time.sleep(0.05)
 			self.changeValve([i], True)
-			time.sleep(0.2)
+			time.sleep(0.1)
 			i=i+1
 		logging.info("initialized distributor '"+ self.name +"'")
 

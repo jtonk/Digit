@@ -23,20 +23,20 @@ def do_main_program():
 	logger.debug(sensors.keys())
 	logger.debug(online.keys())
 	
+	do_scheduler()
+	
 	threadHTTP = Thread(target=inetServer.threadHTTP)
 	threadHTTP.setDaemon(True)
 	threadHTTP.start()
 
-	
-	do_scheduler()
-	
-	#to do, make signal handler
 	while 1:
 		try:
 			time.sleep(0.1)
 		except KeyboardInterrupt:
 			print >> sys.stderr, '\nExiting by user request.\n'
 			sys.exit(0)
+
+
 
 def do_scheduler():
 	sched = Scheduler(daemon=True)
