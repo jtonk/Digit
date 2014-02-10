@@ -15,19 +15,19 @@ from BaseHTTPServer import (HTTPServer, BaseHTTPRequestHandler)
 def do_main_program():
 	# read config and init sensors
 	
-	global distrib,sensors,online
+	global distrib,sensors
 	
-	distrib,sensors,online = config.readConfig()
+	distrib,sensors = config.readConfig()
 	
 	logger.debug(distrib.keys())
 	logger.debug(sensors.keys())
-	logger.debug(online.keys())
+
 	
 	do_scheduler()
 	
-	threadHTTP = Thread(target=inetServer.threadHTTP)
-	threadHTTP.setDaemon(True)
-	threadHTTP.start()
+#	threadHTTP = Thread(target=inetServer.threadHTTP)
+#	threadHTTP.setDaemon(True)
+#	threadHTTP.start()
 
 	while 1:
 		try:
@@ -43,9 +43,10 @@ def do_scheduler():
 	atexit.register(lambda: sched.shutdown(wait=False))
 	sched.start()
 	
-	#start measuring schedule uncomment next line to start first measurement immediately
+	#to disable immediate measuring comment the next line
 	scheduleData.sched_measure()
 	sched.add_cron_job(scheduleData.sched_measure, minute="*/10")
+
 
 
 

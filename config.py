@@ -28,6 +28,9 @@ def readConfig():
 	global dataPrefix
 	dataPrefix = config.get('setup',"dataPrefix")
 	
+	global relayTest 
+	relayTest = config.getboolean('setup',"relayTest")
+	
 	#read shift pins
 	SER_PIN = config.getint('setup',"SER_PIN")
 	RCLK_PIN = config.getint('setup',"RCLK_PIN")
@@ -35,26 +38,38 @@ def readConfig():
 	shiftpi.pinsSetup(ser = SER_PIN, rclk = RCLK_PIN, srclk = SRCLK_PIN)
 
 	global sensors
-	global online
 	global distrib
 	
 	for section in sorted(config.sections()):
 		if section.find('sensor') != -1:
-			sensors[section] = sensorData(section,
+
+			functions = config.get(section,"sensorFunctions").split(',')
+
+			setPoint = False
+
+			settings = [section,
 				config.get(section,"name"),
 				config.get(section,"sensorID"), 
-				config.get(section,"sensorType"), 
-				config.get(section,"dist"), 
-				config.get(section,"valves").split(','), 
-				config.get(section,"temp_set"), 
-				config.get(section,"hum_set"),
-				config.get(section,"color"))
-		if section.find('online') != -1:
-			online[section] = onlineData(config.get(section,"service"), 
-				config.get(section,"location"))
+				config.get(section,"sensorType"),
+				config.get(section,"sensorFunctions").split(','),
+				config.get(section,"color")]
+			try:
+				config.get(section,'relays')
+				settings.append({'relays':config.get(section,"relays").split(',')})
+				settings.append({'setPoints':True})
+				setPoint = True
+			except:
+				settings.append({'setPoints':False})
+
+			if "temperature" in functions and setPoint:
+				settings.append({'temp_set':config.get(section,"temp_set")})
+			if "humidity" in functions and setPoint:
+				settings.append({'hum_set':config.get(section,"hum_set")})
+
+			sensors[section] = sensorData(*settings)
 		if section.find('dist') != -1:
 			distrib[section] = distributorData(config.get(section,"name"), config.get(section,"nr"))
-	return distrib,sensors,online
+	return distrib,sensors
 	
 def writeConfig(section, key, value):
 	config = ConfigParser.RawConfigParser()

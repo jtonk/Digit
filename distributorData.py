@@ -1,22 +1,26 @@
 import shiftpi
-import logging
 import time
+import config
+import logging
+
 logger = logging.getLogger('digitLog')
 class distributorData:
 	def __init__(self, name, nr):
 		self.name = name
 		self.nr = nr
-		
-		#hardware initialization, 8 cicks on/off
-		self.changeValve([0,1,2,3,4,5,6,7], True)
-		time.sleep(0.5)
-		i=0
-		while i<=7:
-			self.changeValve([i], False)
-			time.sleep(0.05)
-			self.changeValve([i], True)
-			time.sleep(0.1)
-			i=i+1
+		if config.relayTest == True:
+			logger.info("testing relay " + self.name)
+			#hardware initialization, 8 cicks on/off
+			self.changeValve([0,1,2,3,4,5,6,7], True)
+			time.sleep(0.5)
+			i=0
+			while i<=7:
+				self.changeValve([i], False)
+				time.sleep(0.01)
+				self.changeValve([i], True)
+				time.sleep(0.1)
+				i=i+1
+
 		logging.info("initialized distributor '"+ self.name +"'")
 
 	def changeValve(self, valves, state):

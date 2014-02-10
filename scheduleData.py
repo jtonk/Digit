@@ -9,4 +9,4 @@ def sched_measure():
 	for keys,value in sorted(config.sensors.items()):
 			value.measure()
 			value.updateRRD()
-			value.tempCheck()
+#			value.tempCheck()
