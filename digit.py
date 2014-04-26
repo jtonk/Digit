@@ -15,20 +15,21 @@ from BaseHTTPServer import (HTTPServer, BaseHTTPRequestHandler)
 def do_main_program():
 	# read config and init sensors
 	
-	global distrib,sensors
+	global sensors
 	
-	distrib,sensors = config.readConfig()
+	sensors = config.readConfig()
 	
-	logger.debug(distrib.keys())
 	logger.debug(sensors.keys())
 
 	
+	
+	
+	threadHTTP = Thread(target=inetServer.threadHTTP)
+	threadHTTP.setDaemon(True)
+	threadHTTP.start()
+	
 	do_scheduler()
 	
-#	threadHTTP = Thread(target=inetServer.threadHTTP)
-#	threadHTTP.setDaemon(True)
-#	threadHTTP.start()
-
 	while 1:
 		try:
 			time.sleep(0.1)

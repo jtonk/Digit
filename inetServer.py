@@ -31,6 +31,8 @@ class customHTTPRequestHandler(BaseHTTPRequestHandler):
 				if self.path == '/':
 					self.path = '/index.html'
 				self.send_response(200)
+				if self.path.endswith(".svg"):
+					self.send_header('Content-type','image/svg+xml')
 #				self.send_header('Content-type','text/html')
 				self.end_headers()
 				with open(rootdir + self.path, 'rb') as content:

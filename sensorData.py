@@ -4,10 +4,11 @@ from bs4 import BeautifulSoup
 import rrdtool
 import config
 import logging
+import shiftpi
 logger = logging.getLogger(__name__)
 
 class sensorData:
-	def __init__(self,section,name,sensorID,sensorType,sensorFunctions,color,*args,**kwargs): 
+	def __init__(self,section,name,sensorID,sensorType,sensorFunctions,color,color2,*args,**kwargs): 
 		self.section = section
 		self.name = name
 		self.sensorID = sensorID
@@ -15,9 +16,14 @@ class sensorData:
 		self.sensorFunctions = sensorFunctions
 		self.db = config.dataPrefix + "/RRD/" + self.section + ".rrd"
 		self.color = color
+		self.color2 = color2
 		for item in args:
 			for key, value in item.iteritems():
 				setattr(self, key, value)
+		
+		###
+		###insert init for relay check here
+		###
 
 		self.createRRD()
 		logging.info("initialized sensor '"+ self.section +"'")
@@ -38,17 +44,17 @@ class sensorData:
 			while(count < 10):
 				try:
 					t, h = dhtreader.read(int(sType), int(self.sensorID))
-					self.temperature = round(float('{0}'.format(t, h)),1)
-					self.humidity = round(float('{1}'.format(t, h)),1)
+					self.temp = round(float('{0}'.format(t, h)),1)
+					self.hum = round(float('{1}'.format(t, h)),1)
 					
 				except TypeError:
 					logging.info("Failed to read from sensor '"+ self.section +"' on attempt "+ str(count+1))
 					count = count + 1
 					time.sleep(2)
-					self.temperature = None
-					self.humidity = None
+					self.temp = None
+					self.hum = None
 				else:
-					logging.info("{0}: {1}'C / {2}%".format(self.name, self.temperature, self.humidity))
+					logging.info("{0}: {1}'C / {2}%".format(self.name, self.temp, self.hum))
 					break
 		#read data for 1-wire
 		if self.sensorType == "1-wire":
@@ -64,78 +70,171 @@ class sensorData:
 						equals_pos = lines[1].find('t=')
 						if equals_pos != -1:
 							temp_string = lines[1][equals_pos+2:]
-					self.temperature = round(float(temp_string) / 1000.0,1)
+					self.temp = round(float(temp_string) / 1000,1)
 					
 				except:
 					logging.warning("Failed to read from sensor '"+ self.section +"' on attempt "+ str(count+1))
 					count = count + 1
 					time.sleep(0.2)
-					self.temperature = None
+					self.temp = None
 				else:
-					logging.info("{0}: {1}'C".format(self.name, self.temperature))
+					logging.info("{0}: {1}'C".format(self.name, self.temp))
 					break
 
 		#read data online from KNMI
 		if self.sensorType == "KNMI":
-			try:
-				data = requests.get("http://m.knmi.nl/index.php?i=Actueel&s=tabel_10min_data").text
-				soup = BeautifulSoup(data)
-				for row in soup.find('table').findAll('tr'):
-					cols = row.findAll('td')
-					if not cols:
-						continue
-					if cols[0].get_text() == self.sensorID:
-						self.temperature = float(cols[2].get_text().replace('&nbsp;', '').strip())
-						self.humidity = float(cols[4].get_text().replace('&nbsp;', '').strip())
-				logger.info("{0}: {1}'C / {2}%".format(self.sensorType + "_" + self.sensorID, self.temperature, self.humidity))
-			except:
-				self.temperature = None
-				self.humidity = None
+			count = 0
+			while(count < 10):
+				try:
+					data = requests.get("http://m.knmi.nl/index.php?i=Actueel&s=tabel_10min_data").text
+					soup = BeautifulSoup(data)
+					for row in soup.find('table').findAll('tr'):
+						cols = row.findAll('td')
+						if not cols:
+							continue
+						if cols[0].get_text() == self.sensorID:
+							self.temp = float(cols[2].get_text().replace('&nbsp;', '').strip())
+							self.hum = float(cols[3].get_text().replace('&nbsp;', '').strip())
+					
+				except:
+					self.temp = None
+					self.hum = None
+					logger.info("error fetching data from {0} (website offline?)".format(self.sensorType + "_" + self.sensorID))
+					count = count + 1
+				else:
+					logger.info("{0}: {1}'C / {2}%".format(self.sensorType + "_" + self.sensorID, self.temp, self.hum))
+					break
 
-	def updateRRD(self):
-		if self.temperature != None or self.humidity != None:
-			data = str(int(time.time()))
-			if "temperature" in self.sensorFunctions:
-				data = data + ":" + str(self.temperature)
-				if self.setPoints:
-					data = data + ":" + str(self.temp_set)
-			if "humidity" in self.sensorFunctions:
-				data = data + ":" + str(self.humidity)
-				if self.setPoints:
-					data = data + ":" + str(self.hum_set)
+		#read data for internal CPU
+		if self.sensorType == "system":
+			count = 0
+			while(count < 10):
+				try:
+					
+					f = open(self.sensorID, 'r')
+					lines = f.read().strip()
+					f.close()
+					self.temp = round(float(lines) / 1000,1)
+				except:
+					logging.warning("Failed to read from sensor '"+ self.section +"' on attempt "+ str(count+1))
+					count = count + 1
+					time.sleep(0.2)
+					self.temp = None
+				else:
+					logging.info("{0}: {1}'C".format(self.name, self.temp))
+					break
 
-			rrdUpdateOptions = []
-			rrdtool.update(self.db, data)
-			logging.info("writing log for '{0}'".format(self.section))
+
+
+	def setValue(self, key, value):
+		### set new value
+		setKey = key + "_set"
+		value = round(value,1)
+
+		if hasattr(self, setKey) and isinstance(value, float):
+			setattr(self, setKey, value)
+			config.writeConfig(self.section, setKey, str(value))
+			logging.info("new min {0} for '{1}' to {2}".format(key,self.name,value))
+			self.check(key)
+			return self.section,key,value
 		else:
-			logging.info("writing log for '{0}' failed, invalid data".format(self.section))
+			logging.info("attribute {0} does not exist for '{1}'".format(key,self.name))
 			return False
 
-	def setValue(self, variable, value):
-		### todo set variable instead of only temp
-		self.temp_set = round(value,1)
-		logging.info("new min temp. '{0}' to {1}'C".format(self.name,self.temp_set))
-		config.writeConfig(self.section, 'temp_set', str(self.temp_set))
-		self.tempCheck()
 
-	def tempCheck(self):
-		logging.info("check temp. '{0}' current/min: {2}/{1}'C".format(self.name, self.temp_set, self.temperature))
-		if float(self.temp_set) >= float(self.temperature):
-			self.dist.changeValve(self.valves,True)
+
+	def check(self, key):
+		valueSet = float(getattr(self, key + "_set"))
+		valueMeasured = float(getattr(self, key))
+		logging.info("check {0} '{1}' current/set: {2}/{3}'C".format(key, self.name, valueMeasured, valueSet))
+		if valueSet >= valueMeasured:
+			logger.info("setting relays {0}/{1} to OPEN".format(self.section, getattr(self, key + "_relays")))
+			for i in range(len(getattr(self, key + "_relays"))):
+				relay = int(getattr(self, key + "_relays")[i])
+				shiftpi.digitalWrite(relay, shiftpi.HIGH)
+				#time.sleep(0.1)
 		else:
-			self.dist.changeValve(self.valves,False)
+			logger.info("setting relays {0}/{1} to CLOSE".format(self.section, getattr(self, key + "_relays")))
+			for i in range(len(getattr(self, key + "_relays"))):
+				relay = int(getattr(self, key + "_relays")[i])
+				shiftpi.digitalWrite(relay, shiftpi.LOW)
+				#time.sleep(0.1)
+	
+	def updateRRD(self):
+		if self.temp != None or self.hum != None: 
+			data = str(int(time.time()))
+			if "temp" in self.sensorFunctions:
+				data = data + ":" + str(self.temp)
+				if self.temp_setPoint:
+					data = data + ":" + str(self.temp_set)
+			if "hum" in self.sensorFunctions:
+				data = data + ":" + str(self.hum)
+				if self.hum_setPoint:
+					data = data + ":" + str(self.hum_set)
+
+			rrdtool.update(self.db, data)
+			logging.info("writing log for '{0}'".format(self.section))
+
+
+	def fetchRRD(self, sensorFunction, resolution, start, end, *args):
+		time, ds, RRDdata = rrdtool.fetch(self.db, 'AVERAGE','-r',str(resolution), '-s', str(start), '-e', str(end) )
+
+		try:
+			if "_set" in args:
+				dataIndex = ds.index(sensorFunction+"_set")
+			else:
+				dataIndex = ds.index(sensorFunction)
+		except:
+			logger.info("error fetching data for {0} - {1}".format(self.section, sensorFunction))
+			return False
+		
+		myList = []
+		
+		if "_set" in args:
+			lastValue = getattr(self, sensorFunction+"_set")
+		else:
+			lastValue = getattr(self, sensorFunction)
+		
+		unit = getattr(self, sensorFunction + "_unit")
+		
+		data = [x[dataIndex] for x in RRDdata]
+		i=0
+		for item in data:
+			date = int((time[0]+(time[2]*i))*1000)
+			if item:
+				value = round(item,1)
+			else:
+				value = None
+			myList.append([date,value])
+			i = i+1
+		#date = int(end*1000)
+		#value = round(float(lastValue),1)
+		#myList.append([date,value])
+		
+		series = {'section':self.section,
+			'seriesFunction':sensorFunction,
+			'unit':unit,
+			'lastValue':lastValue,
+			'data':tuple(myList)}
+		if "_set" in args:
+			series['linkedTo'] = ':previous'
+			series['dashStyle'] = 'Dash'
+		return series
+
+
+
 
 	def createRRD(self):
 		rrdCreateOptions = [self.db,"--step",'600',"--start",'0']
 		
-		if "temperature" in self.sensorFunctions:
+		if "temp" in self.sensorFunctions:
 			rrdCreateOptions.extend(["DS:temp:GAUGE:1800:U:U"])
-			if self.setPoints:
+			if self.temp_setPoint:
 				rrdCreateOptions.extend(["DS:temp_set:GAUGE:1800:U:U"])
 		
-		if "humidity" in self.sensorFunctions:
+		if "hum" in self.sensorFunctions:
 			rrdCreateOptions.extend(["DS:hum:GAUGE:1800:U:U"])
-			if self.setPoints:
+			if self.hum_setPoint:
 				rrdCreateOptions.extend(["DS:hum_set:GAUGE:1800:U:U"])
 		
 		rrdCreateOptions.extend(["RRA:AVERAGE:0.5:1:288","RRA:AVERAGE:0.5:3:336","RRA:AVERAGE:0.5:6:672","RRA:AVERAGE:0.5:144:1825"])

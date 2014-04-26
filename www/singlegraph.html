@@ -16,7 +16,7 @@
 			}
 		});
 		$(function() {
-			$.getJSON('http://raspberrypi.local/api/graph/all/3/3600/endNow', function(data){
+			$.getJSON('http://raspberrypi.local/api/graph/sensor3/1/1800/endNow', function(data){
 
 				// Create the chart
 				$('#container').highcharts({
@@ -39,7 +39,7 @@
 						'#a6c96a'
 					],
 					title: {
-						text: 'temperature Log °C'
+						text: ''
 					},
 					plotOptions: {
 						line: {
@@ -65,7 +65,7 @@
 					},
 					yAxis: {
 						title: {
-							text: 'Temperature °C'
+							text: ''
 						}
 					},
 					tooltip: {

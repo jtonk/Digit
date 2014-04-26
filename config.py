@@ -7,14 +7,10 @@ import shiftpi
 
 #local libs
 from sensorData import sensorData
-from onlineData import onlineData
-from distributorData import distributorData
 
 #main code
 dataPrefix = ""
 sensors = {}
-online = {}
-distrib = {}
 configFile = '/home/jasper/Digit/settings.ini'
 
 def readConfig():
@@ -31,6 +27,12 @@ def readConfig():
 	global relayTest 
 	relayTest = config.getboolean('setup',"relayTest")
 	
+	global temp_unit
+	temp_unit = config.get('setup',"temp_unit")
+	
+	global hum_unit
+	hum_unit = config.get('setup',"hum_unit")
+	
 	#read shift pins
 	SER_PIN = config.getint('setup',"SER_PIN")
 	RCLK_PIN = config.getint('setup',"RCLK_PIN")
@@ -38,7 +40,6 @@ def readConfig():
 	shiftpi.pinsSetup(ser = SER_PIN, rclk = RCLK_PIN, srclk = SRCLK_PIN)
 
 	global sensors
-	global distrib
 	
 	for section in sorted(config.sections()):
 		if section.find('sensor') != -1:
@@ -52,24 +53,37 @@ def readConfig():
 				config.get(section,"sensorID"), 
 				config.get(section,"sensorType"),
 				config.get(section,"sensorFunctions").split(','),
-				config.get(section,"color")]
-			try:
-				config.get(section,'relays')
-				settings.append({'relays':config.get(section,"relays").split(',')})
-				settings.append({'setPoints':True})
-				setPoint = True
-			except:
-				settings.append({'setPoints':False})
-
-			if "temperature" in functions and setPoint:
-				settings.append({'temp_set':config.get(section,"temp_set")})
-			if "humidity" in functions and setPoint:
-				settings.append({'hum_set':config.get(section,"hum_set")})
+				config.get(section,"color"),
+				config.get(section,"color2")]
+			
+			if "temp" in functions:
+				settings.append({'temp':0})
+				settings.append({'temp_unit':temp_unit})
+				try:
+					config.get(section,'temp_relays')
+					
+					settings.append({'temp_relays':config.get(section,"temp_relays").split(',')})
+					settings.append({'temp_set':config.get(section,"temp_set")})
+					settings.append({'temp_setPoint':True})
+				except:
+					settings.append({'temp_setPoint':False})
+					pass
+					
+			if "hum" in functions:
+				settings.append({'hum':0})
+				settings.append({'hum_unit':hum_unit})
+				try:
+					config.get(section,'hum_relays')
+					settings.append({'hum_relays':config.get(section,"hum_relays").split(',')})
+					settings.append({'hum_set':config.get(section,"hum_set")})
+					settings.append({'hum_setPoint':True})
+				except:
+					settings.append({'hum_setPoint':False})
+					pass
 
 			sensors[section] = sensorData(*settings)
-		if section.find('dist') != -1:
-			distrib[section] = distributorData(config.get(section,"name"), config.get(section,"nr"))
-	return distrib,sensors
+
+	return sensors
 	
 def writeConfig(section, key, value):
 	config = ConfigParser.RawConfigParser()

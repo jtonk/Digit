@@ -9,4 +9,7 @@ def sched_measure():
 	for keys,value in sorted(config.sensors.items()):
 			value.measure()
 			value.updateRRD()
-#			value.tempCheck()
+			for function in value.sensorFunctions:
+				if getattr(value, function + "_setPoint") == True:
+					value.check(function)
+	logger.info("-----------finished sched_measure()-----------")

@@ -9,321 +9,450 @@
 	<link rel="stylesheet" href="css/style.css">
 	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
 	<script src="js/highcharts.js"></script>
-	<script src="js/idangerous.swiper-2.1.min.js"></script>
+	<script src="js/idangerous.swiper.js"></script>
 	<script type="text/javascript">
-
-	function highCharts(GraphContainer,sensor){
-		windowWidth = $(window).width();
-		if (windowWidth < 480){
-			days = 1;
+	
+	
+	var objects;
+	settingsTracking = new Array;
+	$(document).ready(function () {
+		//////////////
+		dynamicCSS = function(){
+			$('.belowWater').height($(window).height()-120);
 		}
-		else if (windowWidth >= 480 && windowWidth < 1600 ){
-			days = 3;
-		}else{
-			days = 7;
+		dynamicCSS();
+		//////////////
+		buildURL = function(){
+			windowWidth = $(window).width();
+			if (windowWidth < 480){
+				days = 1;
+				resolution = 3600;
+			}
+			else if (windowWidth >= 480 && windowWidth < 1600 ){
+				days = 3;
+				resolution = 3600;
+			}else{
+				days = 7;
+				resolution = 7200;
+			}
+			dataURL = '/api/graph/all/'+days+'/'+resolution+'/endNow';
+			return dataURL
 		}
 		
 	
-	
-		$.getJSON('/api/graph/'+sensor+'/'+days+'/3600/endNow', function(data){
-		$.getJSON('/api/graph/'+sensor+'/options', function(data_options){
-			$.extend(true, data,data_options);
-			
-			// sort data for last value
-			
-			// Create the chart
-			$(GraphContainer).highcharts({
-				chart: {
-					backgroundColor: '',
-					spacing: [120,20,25,10],
-					borderRadius: 0,
-					type:'spline',
-					
-				},
-				exporting: {
-					enabled: false,
-				},
+		$.getJSON(buildURL(), function(objects){
+			console.log(objects);
 
-				title: {
-					text: null
-				},
-				plotOptions: {
+			//////////////
+			reloadData = function(){
+				
+				$.getJSON(buildURL(), function(newData){
+
+					objects = newData
+					//create loop to refill all the slides
+					$('.graphContainer').remove();
+					$.each(objects, function(sensorIndex, sensorObject) {
+						//refillout the values
+						$('.swiper-slide.nested-slide.'+ objects[sensorIndex].sensor +' .room_sensorData').html(createDataDiv(sensorIndex,settingsTracking[sensorIndex].sensorFunctionIndex));
+						
+						//recreate the graph
+						var sensorDataGraphContainer= $(createGraph(sensorIndex,settingsTracking[sensorIndex].sensorFunctionIndex))
+						$('.swiper-slide.nested-slide.'+sensorObject.sensor).append(sensorDataGraphContainer)
+
+					});
+				});
+			}
+			//////////////
+			createDataDiv = function(sensor_index, sensorData_index){
+				sensorData = objects[sensor_index].sensorData[sensorData_index];
+				var dataDiv = $("<div />")
+			
+				//create lastvalue div
+				var currentDiv = $("<div />", { class : 'current'})
+				valueCurrent = parseFloat(sensorData.lastValue).toFixed(1).replace('.','<span>.') + '</span>';
+				$(currentDiv).append('<div class="lastValue">'+valueCurrent+'</div>').append('<div class="unit">'+sensorData.unit+'</div>').appendTo(dataDiv)
+					
+				//check if it has setpoint values
+				
+				
+
+				if (sensorData_index+1 < objects[sensor_index].sensorData.length){
+					setPointData = objects[sensor_index].sensorData[sensorData_index+1];
+					if (setPointData.linkedTo){
+						var setPointDiv = $("<div />", { class : 'setPoint'})
+						valueSetPoint = parseFloat(setPointData.lastValue).toFixed(1).replace('.','<span>.') + '</span>';
+						$(setPointDiv).append('<div class="lastValue">'+valueSetPoint+'</div>').append('<div class="unit">'+sensorData.unit+'</div>').appendTo(dataDiv)
+					}
+				}
+				
+				$(dataDiv).addClass('dataDiv').attr('id', sensorData.seriesFunction )
+
+				return dataDiv;
+			};
+			//////////////
+			createControls = function(){
+				sensorIndex = parseInt($('.swiper-nested .swiper-slide-active .sensorIndex.invisible').text());
+				sensorObject = objects[sensorIndex];
+				var controls = $("<div />", { class : 'controls'});
+				var changeSetPoint = $ ("<div />", { class : 'SetPoint'})
+				
+				runOnce = false;
+				$.each(sensorObject.sensorData, function(sensorDataIndex, sensorData){
+					if (typeof sensorData.linkedTo === 'undefined'){
+						$(controls).append('<a id="'+sensorDataIndex+'" class="'+ sensorData.seriesFunction +'icon icon" href="#"></a>');
+					}else if (sensorData.linkedTo == ':previous' && runOnce == false){
+						$(changeSetPoint).append('<a class="down" href="#"></a>')
+							.append('<a class="up" href="#"></a>')
+						runOnce = true;
+					}else{
+						//do nothing for now
+					}
+				});
+				
+				var sensorInfo = $("<div />", { class : 'sensorInfo'});
+				$(sensorInfo).append('<div class="item" href="">&nbsp;<span>'+sensorObject.sensor+'</span></div>')
+				$(sensorInfo).append('<div class="item" href="">name<span>'+sensorObject.name+'</span></div>')
+				$(sensorInfo).append('<div class="item" href="">type<span>'+sensorObject.sensorType+'</span></div>')
+				$(sensorInfo).append('<div class="item" href="">id<span>'+sensorObject.sensorID+'</span></div>')
+				$(sensorInfo).append('<div class="item" href="">database<span>'+sensorObject.db+'</span></div>')
+				var functions = [];
+				$.each(sensorObject.sensorData, function(sensorDataIndex, sensorData){
+					if ($.inArray(sensorData.seriesFunction + ' (' + sensorData.unit + ')',functions) != -1){
+						//do nothing fo now
+					}else{
+
+						functions.push(sensorData.seriesFunction + ' (' + sensorData.unit + ')');
+					}
+				});
+
+				$(sensorInfo).append('<div class="item" href="">function<span>'+functions+'</span></div>')
+				$(controls).append(changeSetPoint);
+				$(controls).append(sensorInfo);
+				$('.swiper-parent .swiper-slide.belowWater').html(controls)
+				return true
+			}
+			//////////////
+			activateIcons = function(){
+				//////////////
+				$('.advanced').on('click', function (e){
+					e.preventDefault();
+					
+					
+				});
+				//////////////
+				$('.icon').on('click', function(e){
+					e.preventDefault();
+
+					sensorIndex = $('.swiper-nested .swiper-slide-active .sensorIndex.invisible').text();
+					
+					$('.swiper-slide.nested-slide.'+ objects[sensorIndex].sensor +' .room_sensorData').html(createDataDiv(sensorIndex,parseInt(this.id)));
+					settingsTracking[sensorIndex].sensorFunctionIndex = parseInt(this.id)
+					
+					$('.swiper-slide.nested-slide.'+objects[sensorIndex].sensor+' .graphContainer').remove();
+					var sensorDataGraphContainer = createGraph(sensorIndex, settingsTracking[sensorIndex].sensorFunctionIndex);
+					$('.swiper-slide.nested-slide.'+objects[sensorIndex].sensor).append(sensorDataGraphContainer)
+				});
+				//////////////
+				$('.reload').on('click', function(e){
+					e.preventDefault();
+					location.reload();
+				});
+				//////////////
+				$('.up, .down').on('click', function(e){
+					e.preventDefault();
+
+					sensorIndex = parseInt($('.swiper-nested .swiper-slide-active .sensorIndex.invisible').text());
+					seriesFunction = objects[sensorIndex].sensorData[settingsTracking[sensorIndex].sensorFunctionIndex].seriesFunction;
+					
+					if (this.className == 'up'){
+						multiplier = 1;
+					}else if (this.className == 'down'){
+						multiplier = -1;
+					}
+					
+					if (seriesFunction == 'temp'){
+						delta = 0.5
+					}else if (seriesFunction == 'hum'){
+						delta = 5 
+					}
+					
+					oldValue = $('.swiper-nested .swiper-slide-active .setPoint .lastValue').text();
+					newValue = parseFloat(oldValue) + (delta * multiplier);
+					
+					objects[sensorIndex].sensorData[settingsTracking[sensorIndex].sensorFunctionIndex+1].lastValue = newValue
+					
+					setUrl = '/api/set/'+ objects[sensorIndex].sensor +'/'+ seriesFunction +'/'+ newValue
+					$.getJSON(setUrl, function(reply){
+						valueSetPoint = parseFloat(reply[2]).toFixed(1).replace('.','<span>.') + '</span>';
+						$('.swiper-nested .swiper-slide-active .setPoint .lastValue').html(valueSetPoint);
+					});
+				});
+			}
+			setSVGcolor = function(object, color){
+				sensorIndex = parseInt($('.swiper-nested .swiper-slide-active .sensorIndex.invisible').text());
+				$('svg polygon').attr('fill', objects[sensorIndex].color2);
+			}
+			//////////////
+			createGraph = function(sensorIndex, sensorFunctionIndex){
+				
+				graphHeight = $(window).height()+100;
+				
+				// Create the chart
+				allData = objects[sensorIndex].sensorData;
+				
+				var data = new Array();
+				$.each(allData, function(dataIndex, dataObject){
+					if (dataIndex == sensorFunctionIndex){
+						data.push(dataObject)
+					}else if(dataIndex == sensorFunctionIndex+1 && dataObject.linkedTo == ':previous'){
+						data.push(dataObject)
+					}
+				})
+				//////////////
+				var myChart=$("<div />", { class : 'graphContainer'}).highcharts({
+					chart: {
+						backgroundColor: '',
+						spacing: [110,20,130,10],
+						borderRadius: 0,
+						type:'spline',
+						height:  graphHeight,
+					},
+					colors: [
+						objects[sensorIndex].color2,
+						],
+					exporting: {
+						enabled: false,
+					},
+					title: {
+						text: null
+					},
+					plotOptions: {
 					line: {
 						dataLabels: {
 							enabled: true
 						}
 					},
-
 					series: {
-						connectNulls: true,
+						lineWidth: 2,
+						animation: false,
+						connectNulls: false,
 						marker: {
 							enabled: false,
 						},
 						states: {
 							hover: {
-								enabled: true,
+								enabled: false,
 								lineWidth: 2
 							}
 						},
-						point: {
-							events: {
-								mouseOver: function() {
-									
-									if (!this.series.options.linkedTo){
-										var temp = this.y.toFixed(1).split('.');
-										if (temp[1] == undefined) {
-											temp[1] = '0';
-										}
-										$('.'+sensor+ ' .room_temp span').text(temp[0]+'°');
-										$('.'+sensor+ ' .room_temp_dec').text('.'+temp[1]);
-									} else {
-										$('.'+sensor+ ' .room_temp_set').text(this.y.toFixed(1)+'°');
-									}
-									$('.'+sensor+ ' .room_date').text(Highcharts.dateFormat('%d.%m.%Y - %H:%M', this.x));
-								}
-							}
-						},
-						events: {
-							mouseOut: function() {
-								if (!this.options.linkedTo){
-									var temp = this.data[this.data.length-1].y.toFixed(1).split('.');
-									if (temp[1] == undefined) {
-										temp[1] = '0';
-									}
-									$('.'+sensor+ ' .room_temp span').text(temp[0]+'°');
-									$('.'+sensor+ ' .room_temp_dec').text('.'+temp[1]);
-								} else {
-									$('.'+sensor+ ' .room_temp_set').text(this.data[this.data.length-1].y.toFixed(1)+'°');
-								}
-								$('.'+sensor+ ' .room_date').text('');
-							}
-						}
-					}
-
-				},
-
-				xAxis: {
-					type: 'datetime',
-					lineColor: '#FFF',
-					tickColor: '#FFF',
-					labels: {
-						style: {
-							color: '#FFF',
-						}
-					},
-					maxZoom: 1 * 2 * 3600 * 1000,
-					title: {
-						text: null
-					},
-				},
-				yAxis: {
-					gridLineColor: '#FFF',
-					gridLineWidth: 0,
-					//tickInterval: 0.5,
-					lineColor: '#FFF',
-					labels: {
-						style: {
-							color: '#FFF',
-						}
-					},
-					title: {
-						text: null
-					}
-
-				},
-				legend: {
-					enabled: false,
-				},
-				tooltip: {
-					animation: false,
-					enabled: false,
-					crosshairs: false,
-					shared: true,
-					valueSuffix: '°C'
-				},
-				series:data
-			});
-		});
-		});
-	}
-
-	function shadeColor(color, shade) {
-		var colorInt = parseInt(color.substring(1),16);
-		var R = (colorInt & 0xFF0000) >> 16;
-		var G = (colorInt & 0x00FF00) >> 8;
-		var B = (colorInt & 0x0000FF) >> 0;
-		R = R + Math.floor((shade/255)*R);
-		G = G + Math.floor((shade/255)*G);
-		B = B + Math.floor((shade/255)*B);
-		var newColorInt = (R<<16) + (G<<8) + (B);
-		var newColorStr = "#"+newColorInt.toString(16);
-		return newColorStr;
-	}
-
-	function drawGraph(){
-		$('.room_graph').html('');
-		var sensor = $('.swiper-nested .swiper-slide-active .sensor').text();
-		highCharts('.swiper-nested .swiper-slide-active .room_graph',sensor);
-	}
-
-	function fillData(data_options){
-		$.each(data_options, function(index, object) {
-			if (object.linkedTo != ':previous'){
-				var temp = object.lastValue.toFixed(1).split('.');
-				if (temp[1] == undefined) {
-					temp[1] = '0';
-				}
-				$('.'+ object.sensor + ' .room_temp span').text(temp[0]+'°');
-				$('.'+ object.sensor + ' .room_temp_dec').text('.'+temp[1]);
-				$('.'+ object.sensor + ' .room_temp_set').text(object.lastSetPointValue.toFixed(1)+'°');
-				$('.'+ object.sensor + ' .room_temp_icon_fire').text('');
-				
-				if (object.lastValue <= object.lastSetPointValue){
-					$('.'+ object.sensor + ' .room_temp_icon_fire').append('<img src="img/icon-fire.png"/>');
-				} else {
-					$('.'+ object.sensor + ' .room_temp_icon_fire').text('');
-				}
-			}
-		});
-	}
-	
-	function setNewTemp(delta,sensorName){
-		oldSetTemp = $('.swiper-nested .swiper-slide-active .room_temp_set').text().slice(0, - 1);
-		newSetTemp = parseFloat(oldSetTemp) + parseFloat(delta);
-		$.getJSON('/api/set/'+ sensorName +'/'+ newSetTemp, function(data_options){
-			fillData(data_options);
-			return true;
-		});
-	}
-	
-	
-	function retrieveNewData(){
-		$.getJSON('/api/graph/all/options', function(data_options){
-			fillData(data_options);
-			drawGraph();
-			return true;
-		});
-	}
-	
-	$(document).ready(function () {
-		
-		$.getJSON('/api/graph/all/options', function(data_options){
-			$.each(data_options, function(index, object) {
-	 			if (object.linkedTo != ':previous'){
-	 				var newColor = shadeColor(object.color, -50);
-	 				
-	 				$(".swiper-nested .swiper-wrapper").append(' \
-							<div class="swiper-slide '+object.sensor+'"><div class="sensor" style="display: none;">'+object.sensor+'</div> \
-							<div class="room_data"> \
-								<div class="room_temp"><span></span><div class="room_temp_dec"></div></div> \
-								<div class="room_name" >'+object.name+'</div> \
-								<div class="room_control"> \
-									<a class="arrow-up" href="#"></a> \
-									<div class=room_temp_set>°</div> \
-									<a class="arrow-down" href="#"></a> \
-									<div class="room_temp_icon_fire"></div> \
-								</div> \
-								<div class="room_date" ></div> \
-							</div> \
-							<div id="room_graph" class="room_graph noSwipingClass"></div> \
-						</div>');
-					$("style").append('.'+object.sensor+' {background:'+newColor +';}\n');
-				};
-			});
-			
-			$(function(){
-				var pullSwiper = $('.swiper-parent').swiper({
-					mode:'vertical',
-	
-					onTouchStart: function() {
-						holdPosition = 0;
-					},
-					onResistanceBefore: function(s, pos){
-						holdPosition = pos;
-					},
-					onTouchEnd: function(){
-						if (holdPosition>100) {
-							pullSwiper.setWrapperTranslate(0,100,0)
-							pullSwiper.params.onlyExternal=true
-							$('.preloader').addClass('visible');
-	
-							//reLoad data
-							setTimeout(function(){
-								
-								retrieveNewData();
-								//Release interactions and set wrapper
-								console.log('start timeout');
-								pullSwiper.setWrapperTranslate(0,0,0);
-								pullSwiper.params.onlyExternal=false;
-								pullSwiper.updateActiveSlide(0);
-	
-								//Hide loader
-								$('.preloader').removeClass('visible')
-							},800)
-						}
 						
 					}
+				},
+					xAxis: {
+						type: 'datetime',
+						lineColor: objects[sensorIndex].color2,
+						tickColor: objects[sensorIndex].color2,
+						labels: {
+							style: {
+								color: objects[sensorIndex].color2,
+							}
+						},
+						maxZoom: 1 * 2 * 3600 * 1000,
+						title: {
+							text: null
+						},
+					},
+					yAxis: {
+						gridLineColor: objects[sensorIndex].color2,
+						gridLineWidth: 0,
+						//tickInterval: 0.5,
+						lineColor: '#FFF',
+						labels: {
+							style: {
+								color: objects[sensorIndex].color2,
+							}
+						},
+						title: {
+							text: null
+						}
+					},
+					legend: {
+						enabled: false,
+					},
+					tooltip: {
+						animation: false,
+						enabled: false,
+						crosshairs: false,
+						shared: true,
+						valueSuffix: '°C'
+					},
+					series:data,
 				});
+				return myChart;
+			}
+			/////////////////////////////////////////////
+			// initial loop through sensors
+			$.each(objects, function(sensorIndex, sensorObject) {
+				
+				var sensorDataDiv = $("<div />", { class : 'room_sensorData'})
+				//create initial dataDiv
+				initialFunction = 0
+				$(sensorDataDiv).append(createDataDiv(sensorIndex,initialFunction))
+
+				//create hidden info, name and data fields
+				var name = $("<div />", { class : 'room_data'})
+					.append('<div class="sensorIndex invisible">'+sensorIndex+'</div>')
+					.append('<div class="sensorFunctionIndex invisible">'+initialFunction+'</div>')
+					.append('<div class="room_name" >'+sensorObject.name+'</div>')
+				//	.append('<div class="room_date" >dd.mm.yyyy hh:mm</div>')
+				
+				//add graph container
+				var sensorDataGraphContainer= $(createGraph(sensorIndex,initialFunction))
+				
+				// append it all to the slide
+				$("<div />", { class : 'swiper-slide nested-slide '+sensorObject.sensor }) 
+					.append(name)
+					.append(sensorDataDiv)
+					.append(sensorDataGraphContainer)
+					.appendTo('.swiper-nested .swiper-wrapper');
+
+				// apply background color per sensor
+				$("style").append('.swiper-slide.'+sensorObject.sensor+' {background:'+sensorObject.color +'; color:'+sensorObject.color2 +';}\n');
+				
+				// settings tracking for later
+				settingsTracking[sensorIndex] = {'name':sensorObject.name,'sensor':sensorObject.sensor,'sensorFunctionIndex':initialFunction};
 			})
-			$(function(){
-				var mySwiper = $('.swiper-nested').swiper({
-					loop:true,
-					grabCursor: true,
+			
+		/////////////////////////////////////////////
+		//make sliders
+		}).then(function() {
+			
+			var pullSwiper = $('.swiper-parent').swiper({
+				mode:'vertical',
+				slidesPerView:'auto',
+				watchActiveIndex: true,
+				initialSlide: 1,
+				
 
-					onSlideChangeEnd : function() {
-						drawGraph();
+				onSlideChangeStart: function(){
+						$('.arrow-left').animate({left: -110})
+						$('.arrow-right').animate({right: -110})
+				},
+				onSlideChangeEnd: function(){
+					if (pullSwiper.activeIndex == 1){
+						mySwiper.params.onlyExternal=false;
+					}else{
+						mySwiper.params.onlyExternal=true;
 					}
-				});
+					if(pullSwiper.activeIndex == 1 ){
+						$('.arrow-left').animate({left: 10})
+						$('.arrow-right').animate({right: 10})
+					}
+				},
+				onTouchStart: function() {
+					holdPosition = 0;
+				},
+				onResistanceBefore: function(s, pos){
+					holdPosition = pos;
+				},
+				onTouchEnd: function(){
+					if (holdPosition>100 && pullSwiper.activeIndex == 0 ) {
+						active = true;
+						pullSwiper.setWrapperTranslate(0,120,0)
+						pullSwiper.params.onlyExternal=true
+						mySwiper.params.onlyExternal=true;
+						
+						$('.preloader').addClass('visible');
+						//switch slider function
+						setTimeout(function(){
+							//Release interactions and set wrapper
+							pullSwiper.setWrapperTranslate(0,0,0);
+							pullSwiper.params.onlyExternal=false;
+							mySwiper.params.onlyExternal=false;
+							$('.preloader').removeClass('visible');
+							pullSwiper.swipeTo(1);
+							//reload function
+							reloadData();
+							
+						},1600)
+						
+					}
+				}
+			});
 			
-
+			var mySwiper = $('.swiper-nested').swiper({
+				loop:true,
+				grabCursor: true,
+				initialSlide: 1,
+				onSwiperCreated: function(){
+					createControls();
+					$('.arrow-left').animate({left: 10})
+					$('.arrow-right').animate({right: 10})
+					setSVGcolor();
+					activateIcons();
+				},
+				onSlideChangeStart: function(){
+					$('.arrow-left').css({left: -110})
+					$('.arrow-right').css({right: -110})
+					
+				},
+				onSlideChangeEnd: function(){
+					setSVGcolor();
+					$('.arrow-left').animate({left: 10})
+					$('.arrow-right').animate({right: 10})
+					createControls();
+					activateIcons();
+					
+					
+				},
+			});
+			//////////////
+			$('body').append('').append('')
 			$('.arrow-left').on('click', function(e){
-			e.preventDefault();
-			mySwiper.swipePrev();
+				e.preventDefault();
+				mySwiper.swipePrev();
 			});
-
+			//////////////
 			$('.arrow-right').on('click', function(e){
-			e.preventDefault();
-			mySwiper.swipeNext();
+				e.preventDefault();
+				mySwiper.swipeNext();
 			});
-
-			$('.arrow-up').on('click', function(e){
-			e.preventDefault();
-			var sensorName = $('.swiper-nested .swiper-slide-active .sensor').text();
-			setNewTemp(0.5,sensorName);
-			});
-			
-			$('.arrow-down').on('click', function(e){
-			e.preventDefault();
-			var sensorName = $('.swiper-nested .swiper-slide-active .sensor').text();
-			setNewTemp(-0.5,sensorName);
-			});
-
-			fillData(data_options);
-			drawGraph();
-			
-})
-
- 		});
- 		
- 		$(window).resize(function() {
+		});
+		
+		$(window).resize(function() {
+			dynamicCSS();
+			$('.graphContainer').remove();
 			clearTimeout(this.id);
-			this.id = setTimeout(retrieveNewData, 600);
+			this.id = setTimeout(function(){
+				
+				reloadData();
+			},150);
+			
 		});
 	});
-
 	</script>
 	<style type="text/css"></style>
 </head>
 
 <body>
-	<div class="preloader">
-		Loading...
-	</div>
-	<div id="reporting"></div>
-	<a class="arrow-left" href="#"></a>
-	<a class="arrow-right" href="#"></a>
+	<div class="preloader">Loading...</div>
+	
+
 	<div class="swiper-container swiper-parent">
+		<a class="arrow-left" href="#">
+		<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="40px" height="40px" viewBox="0 0 50 50" enable-background="new 0 0 50 50" xml:space="preserve">
+			<polygon fill="white" points="14.038,0.609 11.751,2.896 33.855,25 11.751,47.104 14.038,49.391 38.429,25 "/>
+		</svg>
+	</a>
+	<a class="arrow-right" href="#">
+		<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="40px" height="40px" viewBox="0 0 50 50" enable-background="new 0 0 50 50" xml:space="preserve">
+			<polygon fill="white" points="14.038,0.609 11.751,2.896 33.855,25 11.751,47.104 14.038,49.391 38.429,25 "/>
+		</svg>
+	</a>
 		<div class="swiper-wrapper">
+			<div class="swiper-slide belowWater">
+				&nbsp;
+			</div>
 			<div class="swiper-slide parent-slide">
 				<div class="swiper-container swiper-nested">
 					<div class="swiper-wrapper"></div>
