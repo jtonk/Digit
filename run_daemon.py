@@ -38,7 +38,7 @@ class App():
 app = App()
 
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter("%(asctime)s|%(name)s|%(levelname)s: %(message)s")
 handler = logging.handlers.RotatingFileHandler('digit.log',maxBytes=400000, backupCount=3)
 #handler = logging.FileHandler('digit.log')

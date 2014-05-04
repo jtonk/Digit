@@ -36,21 +36,26 @@ class sensorData:
 			dhtreader.init()
 			if self.sensorType == "DHT11":
 				sType = 11
-			if self.sensorType == "DHT22":
+			elif self.sensorType == "DHT22":
 				sType = 22
-			if self.sensorType == "AM2302":
+			elif self.sensorType == "AM2302":
 				sType == 2302
+			else:
+				print("invalid type, only 11, 22 and 2302 are supported for now!")
+				return false
 			
 			while(count < 10):
 				try:
 					t, h = dhtreader.read(int(sType), int(self.sensorID))
+					logger.debug("t,h =  {0},{1} (error in dhtreader.so?)".format(t, h))
 					self.temp = round(float('{0}'.format(t, h)),1)
 					self.hum = round(float('{1}'.format(t, h)),1)
 					
 				except TypeError:
 					logging.info("Failed to read from sensor '"+ self.section +"' on attempt "+ str(count+1))
+					f
 					count = count + 1
-					time.sleep(2)
+					time.sleep(3)
 					self.temp = None
 					self.hum = None
 				else:
@@ -97,10 +102,11 @@ class sensorData:
 							self.hum = float(cols[3].get_text().replace('&nbsp;', '').strip())
 					
 				except:
-					self.temp = None
-					self.hum = None
 					logger.info("error fetching data from {0} (website offline?)".format(self.sensorType + "_" + self.sensorID))
 					count = count + 1
+					time.sleep(0.2)
+					self.temp = None
+					self.hum = None
 				else:
 					logger.info("{0}: {1}'C / {2}%".format(self.sensorType + "_" + self.sensorID, self.temp, self.hum))
 					break
