@@ -6,9 +6,10 @@ import config
 import logging
 import shiftpi
 logger = logging.getLogger(__name__)
+import scheduleData
 
 class sensorData:
-	def __init__(self,section,name,sensorID,sensorType,sensorFunctions,color,color2,*args,**kwargs): 
+	def __init__(self,section,name,sensorID,sensorType,sensorFunctions,color,color2,interval,*args,**kwargs): 
 		self.section = section
 		self.name = name
 		self.sensorID = sensorID
@@ -17,6 +18,7 @@ class sensorData:
 		self.db = config.dataPrefix + "/RRD/" + self.section + ".rrd"
 		self.color = color
 		self.color2 = color2
+		self.interval = interval
 		for item in args:
 			for key, value in item.iteritems():
 				setattr(self, key, value)
@@ -26,6 +28,10 @@ class sensorData:
 		###
 
 		self.createRRD()
+		
+		logging.info("adding " + self.section +" for interval checks'"+ self.section +"'")
+		config.sched.add_cron_job(self.schedule, name=self.section, minute="*/"+self.interval, max_instances=1, misfire_grace_time=60)
+		
 		logging.info("initialized sensor '"+ self.section +"'")
 
 	def measure(self):
@@ -53,7 +59,6 @@ class sensorData:
 					
 				except TypeError:
 					logging.info("Failed to read from sensor '"+ self.section +"' on attempt "+ str(count+1))
-					f
 					count = count + 1
 					time.sleep(3)
 					self.temp = None
@@ -165,6 +170,14 @@ class sensorData:
 				relay = int(getattr(self, key + "_relays")[i])
 				shiftpi.digitalWrite(relay, shiftpi.LOW)
 				#time.sleep(0.1)
+	
+	def schedule(self):
+		self.measure()
+		self.updateRRD()
+		for function in self.sensorFunctions:
+				if getattr(self, function + "_setPoint") == True:
+					self.check(function)
+	
 	
 	def updateRRD(self):
 		if self.temp != None or self.hum != None: 

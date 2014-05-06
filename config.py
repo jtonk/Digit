@@ -12,6 +12,7 @@ from sensorData import sensorData
 dataPrefix = ""
 sensors = {}
 configFile = '/home/jasper/Digit/settings.ini'
+sched = {}
 
 def readConfig():
 	now = time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.localtime())
@@ -54,7 +55,8 @@ def readConfig():
 				config.get(section,"sensorType"),
 				config.get(section,"sensorFunctions").split(','),
 				config.get(section,"color"),
-				config.get(section,"color2")]
+				config.get(section,"color2"),
+				config.get(section,"interval")]
 			
 			if "temp" in functions:
 				settings.append({'temp':0})

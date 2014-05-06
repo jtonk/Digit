@@ -13,10 +13,12 @@ from BaseHTTPServer import (HTTPServer, BaseHTTPRequestHandler)
 
 
 def do_main_program():
+	
+	do_scheduler()
+
 	# read config and init sensors
 	
 	global sensors
-	
 	sensors = config.readConfig()
 	
 	logger.debug(sensors.keys())
@@ -27,8 +29,7 @@ def do_main_program():
 	threadHTTP = Thread(target=inetServer.threadHTTP)
 	threadHTTP.setDaemon(True)
 	threadHTTP.start()
-	
-	do_scheduler()
+
 	
 	while 1:
 		try:
@@ -40,16 +41,10 @@ def do_main_program():
 
 
 def do_scheduler():
-	sched = Scheduler(daemon=True)
+	config.sched = Scheduler(daemon=True)
 	atexit.register(lambda: sched.shutdown(wait=False))
-	sched.start()
+	config.sched.start()
 	
-	#to disable immediate measuring comment the next line
-	scheduleData.sched_measure()
-	sched.add_cron_job(scheduleData.sched_measure, minute="*/10")
-
-
-
 
 if __name__ == '__main__':
     do_main_program()

@@ -2,6 +2,15 @@
 *.so
 *.rrd
 *.log
+*.log.1
+*.log.2
+*.log.3
 *.ini
 .AppleDouble
 .DS_Store
+*.gitignore
+
+
+*.ini
+
+*.3
