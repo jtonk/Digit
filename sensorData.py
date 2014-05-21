@@ -22,20 +22,22 @@ class sensorData:
 		for item in args:
 			for key, value in item.iteritems():
 				setattr(self, key, value)
-		
-		###
-		###insert init for relay check here
-		###
 
+		#check if Round Robin Database exists
 		self.createRRD()
 		
 		logging.info("adding " + self.section +" for interval checks'"+ self.section +"'")
+		
+		#add interval schedule on init
 		config.sched.add_cron_job(self.schedule, name=self.section, minute="*/"+self.interval, max_instances=1, misfire_grace_time=60)
+		#run interval schedule on init
+		self.schedule()
 		
 		logging.info("initialized sensor '"+ self.section +"'")
 
 	def measure(self):
-	#read data for DHT compatible
+
+		#read data for DHT compatible
 		if self.sensorType in ("DHT11","DHT23","AM2302"):
 			count = 0
 			sType = 0
@@ -134,6 +136,7 @@ class sensorData:
 				else:
 					logging.info("{0}: {1}'C".format(self.name, self.temp))
 					break
+		self.lastMeasure = int(time.time())
 
 
 
@@ -234,6 +237,7 @@ class sensorData:
 			'seriesFunction':sensorFunction,
 			'unit':unit,
 			'lastValue':lastValue,
+			'lastMeasure':self.lastMeasure * 1000,
 			'data':tuple(myList)}
 		if "_set" in args:
 			series['linkedTo'] = ':previous'

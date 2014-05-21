@@ -42,7 +42,7 @@ def do_main_program():
 
 def do_scheduler():
 	config.sched = Scheduler(daemon=True)
-	atexit.register(lambda: sched.shutdown(wait=False))
+	atexit.register(lambda: config.sched.shutdown(wait=False))
 	config.sched.start()
 	
 

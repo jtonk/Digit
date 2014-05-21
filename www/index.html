@@ -202,12 +202,19 @@
 				
 				var data = new Array();
 				$.each(allData, function(dataIndex, dataObject){
+					last = dataObject.data.length-1;
+
+					dataObject.data[last][0] = dataObject.lastMeasure;
+					dataObject.data[last][1] = parseFloat(dataObject.lastValue);
+
 					if (dataIndex == sensorFunctionIndex){
 						data.push(dataObject)
 					}else if(dataIndex == sensorFunctionIndex+1 && dataObject.linkedTo == ':previous'){
 						data.push(dataObject)
+						
 					}
 				})
+				
 				//////////////
 				var myChart=$("<div />", { class : 'graphContainer'}).highcharts({
 					chart: {
